@@ -1,0 +1,150 @@
+#q-app {
+  background-color: #f0f0f0 !important;
+}
+
+.story-page {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+}
+
+.fixed-image-container {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 50%;
+  height: 100vh;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.image-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.image-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 3rem;
+}
+
+.image-container.previous {
+  z-index: 0;
+}
+
+.image-container.current {
+  z-index: 1;
+}
+
+.story-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.story-image.previous-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.content-container {
+  width: 50%;
+  position: relative;
+  z-index: 2;
+}
+
+.story-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.preload-container {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  z-index: -999;
+  opacity: 0;
+}
+
+.preload-image {
+  width: 1px;
+  height: 1px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .story-page {
+    flex-direction: column;
+  }
+
+  .story-image-mobile {
+    display: block;
+  }
+
+  .fixed-image-container {
+    position: relative;
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+  }
+
+  .content-container {
+    width: 100%;
+  }
+
+  .story-section {
+    min-height: auto;
+    padding: 1rem;
+  }
+
+  /* Disable animations for mobile */
+  .story-image {
+    transition: none;
+    transform: none !important;
+  }
+
+  .image-container {
+    transition: none;
+  }
+}
