@@ -20,7 +20,7 @@ export const Default: Story = {}
 export const CustomData: Story = {
   args: {
     schemaData: {
-      stories: [
+      settings: [
         {
           title: 'Benutzerdefinierter Titel 1',
           subtitle: '01',

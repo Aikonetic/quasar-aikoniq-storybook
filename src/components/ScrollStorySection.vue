@@ -1,62 +1,80 @@
 <template>
   <div :class="templateClass">
-    <div class="row q-col-gutter-xl scroll-section">
-      <!-- Text Content -->
-      <div :class="isClient && isMobile ? 'col-12' : 'col-6'">
+    <div class="scroll-section full-height">
+      <!-- Grid container with 2 columns -->
+      <div  :class="isMobile ? 'row' : 'grid two-cols q-col-gutter-xl'">
+        <!-- Text grid in the left column -->
         <div
-          v-for="(item, index) in section.stories"
-          :key="index"
-          class="content-block"
-          :ref="(el) => isClient && el && (contentRefs[index] = el)"
-          @mouseenter="isClient && isMobile ? (activeIndex = index) : null"
+          ref="textGridRef"
+          class="vertical-grid text-grid col-12 col-md-6"
         >
-          <!-- Subtitle with line -->
-          <div class="row items-center q-mb-sm step-number">
-            <div class="line q-mr-sm"></div>
-            <div class="text-subtitle2 text-bold">{{ item.subtitle }}</div>
-          </div>
-
-          <!-- Title -->
-          <h2 class="text-h3 text-bold q-mb-md">{{ item.title }}</h2>
-
-          <!-- Paragraphs -->
-          <p class="text-body1 q-mb-md" style="line-height: 1.6">
-            {{ item.paragraph }}
-          </p>
-
-          <!-- Mobile Image -->
-          <div v-if="isClient && isMobile" class="q-mt-md">
-            <q-img
-              :src="item.image"
-              :ratio="imageRatio"
-              spinner-color="primary"
-              class="rounded-borders"
-            />
+          <div
+            v-for="(item, index) in section.settings"
+            :key="index"
+            class="content-block"
+            :ref="el => contentRefs[index] = el"
+            :style="{
+              paddingTop: isClient && isMobile ? '60px' : '0',
+              opacity: index === activeIndex ? 1 : isMobile ? 1 : 0,
+            }"
+          >
+            <div class="row items-center q-mb-sm step-number">
+              <div class="line q-mr-sm"></div>
+              <div class="text-subtitle2 text-bold">{{ item.subtitle }}</div>
+            </div>
+            <h2 class="text-h3 text-bold q-mb-md">{{ item.title }}</h2>
+            <p class="text-body1 q-mb-md" style="line-height: 1.6">
+              {{ item.paragraph }}
+            </p>
+            <div v-if="isClient && isMobile" class="q-mt-md">
+              <q-img
+                :src="item.image"
+                loading="eager"
+                :ratio="imageRatio"
+                no-spinner
+                class="rounded-borders"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Desktop Sticky Image -->
-      <div v-if="isClient && !isMobile" class="col-6 sticky-image">
-        <transition name="fade">
-          <q-img
-            v-if="section.stories[activeIndex]"
-            :src="section.stories[activeIndex].image"
-            :key="activeIndex"
-            :ratio="imageRatio"
-            class="rounded-borders"
-            spinner-color="primary"
-            style="width: 100%; height: auto"
-          />
-        </transition>
+        <!-- Image grid in the right column -->
+        <div
+          v-if="isClient && !isMobile"
+          ref="imageGridRef"
+          class="col-12 col-md-6 relative-position"
+        >
+          <div
+            class="image-grid sticky-image"
+            :style="{ paddingTop: `${imageRatio * 100}%` }"
+          >
+            <transition :name="scrollDirection === 'down' ? 'slide-up' : 'slide-down'">
+              <q-img
+                v-if="section.settings[activeIndex]"
+                :src="section.settings[activeIndex].image"
+                :key="activeIndex"
+                :ratio="imageRatio"
+                class="rounded-borders slide-img"
+                no-spinner
+                no-transition
+              >
+                <div>{{ [activeIndex + 1] }}</div>
+              </q-img>
+            </transition>
+
+          </div>
+
+        </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, getCurrentInstance, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
+import {ref, computed, getCurrentInstance, onMounted, nextTick, watch} from 'vue'
+import {useQuasar} from 'quasar'
+import {useGlobalStore} from 'stores/globalStore.js'
 
 export default {
   name: 'ScrollStorySection',
@@ -78,14 +96,24 @@ export default {
   setup(props) {
     const $q = useQuasar()
     const isClient = ref(false)
-    const isMobile = ref(false)
     const activeIndex = ref(0)
     const contentRefs = []
-    let observer = null
+    const textGridRef = ref(null)
+    const imageGridRef = ref(null)
+
+    const isMobile = computed(() => {
+      if (typeof window === 'undefined') return $q.platform.is.mobile
+      return $q.screen.lt.sm
+    })
+
+    const initialImageGridPosition = ref(0)
+
+    const globalStore = useGlobalStore()
+    const scrollDirection = ref('down')
 
     const Presets = {
       type: 'ScrollStorySection',
-      stories: [
+      settings: [
         {
           title: 'AikoniQ Essentials',
           subtitle: '01',
@@ -130,56 +158,55 @@ export default {
       ],
     }
 
-    const section = computed(() => {
-      return props.schemaData && props.schemaData.stories ? props.schemaData : Presets
-    })
+    const section = computed(() => (
+      props.schemaData.settings ? props.schemaData : Presets
+    ))
 
-    const templateClass = ref('aikoniq-section--' + getCurrentInstance()?.type.name)
+    const templateClass = ref(
+      'aikoniq-section--' + getCurrentInstance()?.type.name
+    )
 
     const imageRatio = computed(() => {
-      const width = $q.screen.width
-      if (width <= 600) return 6 / 7
-      if (width <= 1024) return 8 / 11
+      if ($q.screen.sizes.sm) return 6 / 7
+      if ($q.screen.sizes.md) return 8 / 11
       return 688 / 563
     })
 
+function syncActiveIndex(initialPosition) {
+  if (!textGridRef.value) return
+  let closest = 0
+  let minDist = Infinity
+  contentRefs.forEach((el, idx) => {
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      console.debug('EL', idx, rect)
+      let dist = Math.abs(rect.top - initialPosition)
+      if (idx === contentRefs.length - 1) {
+        dist *= 0.7
+      }
+      if (dist < minDist) {
+        minDist = dist
+        closest = idx
+      }
+    }
+  })
+  activeIndex.value = closest
+}
+
     onMounted(async () => {
       isClient.value = true
-
-      const updateMobile = () => {
-        isMobile.value = $q.screen.width < 600
-      }
-
-      updateMobile()
-      window.addEventListener('resize', updateMobile)
-
-      onBeforeUnmount(() => {
-        window.removeEventListener('resize', updateMobile)
-      })
-
-      if (!$q.screen.width || isMobile.value) return
-
       await nextTick()
 
-      observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const index = contentRefs.findIndex((el) => el === entry.target)
-              if (index !== -1) activeIndex.value = index
-            }
-          })
-        },
-        { threshold: 0.3 },
+      scrollDirection.value = globalStore.getScrollInfo.direction > 0 ? 'down' : 'up'
+      initialImageGridPosition.value = imageGridRef.value.getBoundingClientRect().top
+      syncActiveIndex(initialImageGridPosition.value)
+      watch(
+        () => globalStore.getScrollInfo.position,
+        () => {
+          scrollDirection.value = globalStore.getScrollInfo.direction > 0 ? 'down' : 'up'
+          syncActiveIndex(initialImageGridPosition.value)
+        }
       )
-
-      contentRefs.forEach((el) => {
-        if (el) observer.observe(el)
-      })
-
-      onBeforeUnmount(() => {
-        if (observer) observer.disconnect()
-      })
     })
 
     return {
@@ -190,37 +217,94 @@ export default {
       activeIndex,
       contentRefs,
       imageRatio,
+      scrollDirection,
+      textGridRef,
+      imageGridRef
     }
-  },
+  }
 }
 </script>
 
 <style scoped>
-.scroll-section {
-  margin-top: 50px;
-  padding: 40px;
-}
 .sticky-image {
   position: sticky;
   top: 10px;
+}
+
+.scroll-section {
+  margin-top: 50px;
+  margin-bottom: 50px;
+  padding: 40px;
+}
+
+.grid.two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.vertical-grid {
+  display: grid;
+  grid-auto-rows: auto;
+  row-gap: 100px;
+}
+
+.image-grid {
+  position: sticky;
+  top: 10px;
+  align-self: start;
+}
+
+.slide-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
+  object-fit: contain;
 }
-.content-block {
-  margin: 100px 0;
-  padding-top: 60px;
-  min-height: 100vh;
-}
+
 .step-number .line {
   width: 30px;
   height: 2px;
   background-color: black;
 }
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0s ease;
+
+.content-block {
+  padding-top: 60px;
 }
-.fade-enter-from,
-.fade-leave-to {
+
+/* Übergangs-Animationen bleiben erhalten */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(20px);
   opacity: 0;
+}
+
+.slide-up-enter-to,
+.slide-up-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  transform: translateY(0);
+  opacity: 1;
 }
 </style>
