@@ -72,6 +72,19 @@
 </template>
 
 <script>
+/**
+ * ScrollStorySection.vue
+ *
+ * This Vue component displays a scrollable story section with text and images.
+ * It supports both mobile and desktop layouts, and synchronizes the active story
+ * block with the user's scroll position. Images and text are animated based on scroll direction.
+ *
+ * Props:
+ * - schemaData: Object containing section settings (optional, falls back to Presets)
+ * - parentId: String or Number, optional parent identifier
+ *
+ * Uses Quasar for responsive design and global store for scroll info.
+ */
 import {ref, computed, getCurrentInstance, onMounted, nextTick, watch} from 'vue'
 import {useQuasar} from 'quasar'
 import {useGlobalStore} from 'stores/globalStore.js'
@@ -84,10 +97,17 @@ export default {
     groups: ['footer'],
   },
   props: {
+    /**
+     * Section data, including settings for each story block.
+     * If not provided, default Presets are used.
+     */
     schemaData: {
       type: Object,
       default: () => ({}),
     },
+    /**
+     * Optional parent identifier.
+     */
     parentId: {
       type: [String, Number],
       default: null,
@@ -101,6 +121,10 @@ export default {
     const textGridRef = ref(null)
     const imageGridRef = ref(null)
 
+    /**
+     * Computed property to determine if the device is mobile.
+     * Uses Quasar's screen detection.
+     */
     const isMobile = computed(() => {
       if (typeof window === 'undefined') return $q.platform.is.mobile
       return $q.screen.lt.sm
@@ -111,6 +135,9 @@ export default {
     const globalStore = useGlobalStore()
     const scrollDirection = ref('down')
 
+    /**
+     * Default section data if no schemaData is provided.
+     */
     const Presets = {
       type: 'ScrollStorySection',
       settings: [
@@ -158,41 +185,58 @@ export default {
       ],
     }
 
+    /**
+     * Computed property for the section data (either from props or Presets).
+     */
     const section = computed(() => (
       props.schemaData.settings ? props.schemaData : Presets
     ))
 
+    /**
+     * Computed class name for the template root element.
+     */
     const templateClass = ref(
       'aikoniq-section--' + getCurrentInstance()?.type.name
     )
 
+    /**
+     * Computed property for the image aspect ratio, responsive to screen size.
+     */
     const imageRatio = computed(() => {
       if ($q.screen.sizes.sm) return 6 / 7
       if ($q.screen.sizes.md) return 8 / 11
       return 688 / 563
     })
 
-function syncActiveIndex(initialPosition) {
-  if (!textGridRef.value) return
-  let closest = 0
-  let minDist = Infinity
-  contentRefs.forEach((el, idx) => {
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      console.debug('EL', idx, rect)
-      let dist = Math.abs(rect.top - initialPosition)
-      if (idx === contentRefs.length - 1) {
-        dist *= 0.7
-      }
-      if (dist < minDist) {
-        minDist = dist
-        closest = idx
-      }
+    /**
+     * Synchronizes the activeIndex with the closest content block to the initial position.
+     * @param {number} initialPosition - The reference position (usually the top of the image grid)
+     */
+    function syncActiveIndex(initialPosition) {
+      if (!textGridRef.value) return
+      let closest = 0
+      let minDist = Infinity
+      contentRefs.forEach((el, idx) => {
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          console.debug('EL', idx, rect)
+          let dist = Math.abs(rect.top - initialPosition)
+          if (idx === contentRefs.length - 1) {
+            dist *= 0.7
+          }
+          if (dist < minDist) {
+            minDist = dist
+            closest = idx
+          }
+        }
+      })
+      activeIndex.value = closest
     }
-  })
-  activeIndex.value = closest
-}
 
+    /**
+     * Lifecycle hook: onMounted
+     * Initializes client state, sets up scroll direction, and watches for scroll position changes.
+     */
     onMounted(async () => {
       isClient.value = true
       await nextTick()
