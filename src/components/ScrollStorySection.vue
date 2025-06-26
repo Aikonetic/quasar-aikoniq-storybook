@@ -87,7 +87,7 @@
  */
 import {ref, computed, getCurrentInstance, onMounted, nextTick, watch} from 'vue'
 import {useQuasar} from 'quasar'
-import {useGlobalStore} from 'stores/globalStore.js'
+import {useGlobalStore} from 'src/stores/globalStore.js'
 
 export default {
   name: 'ScrollStorySection',
