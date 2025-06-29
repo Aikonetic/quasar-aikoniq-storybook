@@ -1,5 +1,5 @@
 <template>
-  <ScrollStorySection></ScrollStorySection>
+  <ScrollStorySection />
 </template>
 
 <script setup>
